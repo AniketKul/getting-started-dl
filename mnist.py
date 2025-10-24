@@ -73,6 +73,130 @@ image = F.to_pil_image(x_0_tensor)
 plt.imshow(image, cmap='gray')
 plt.show()
 
-## Preparing data for training
+""" 1.4 Preparing the data for training """
 
 trans = transforms.Compose([transforms.ToTensor()])
+
+train_set.transform = trans
+valid_set.transform = trans
+
+"""
+If a dataset is a deck of flash cards, 
+a DataLoader defines how we pull cards from the deck to train an AI model. 
+We could show our models the entire dataset at once. Not only does this take 
+a lot of computational resources, but research shows using a smaller batch of 
+data is more efficient for model training.
+"""
+
+batch_size = 32
+train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+valid_loader = DataLoader(valid_set, batch_size=batch_size)
+
+""" 1.5 Creating the Model """
+
+layers = []
+test_matrix = torch.tensor(
+    [[1, 2, 3],
+     [4, 5, 6],
+     [7, 8, 9]]
+)
+print(test_matrix)
+nn.Flatten()(test_matrix)
+
+# Currently, the Flatten layer sees three vectors as opposed to one 2d matrix. 
+# To fix this, we can "batch" our data by adding an extra pair of brackets. 
+# Since `test_matrix` is now a tensor, we can do that with the shorthand below. 
+# `None` adds a new dimension where `:` selects all the data in a tensor.
+
+batch_test_matrix = test_matrix[None, :]
+print(batch_test_matrix)
+nn.Flatten()(batch_test_matrix)
+
+layers = [
+    nn.Flatten()
+]
+
+""" 1.5.2 The Input Layer """
+
+# Our first layer of neurons connects our flattened image to the rest of our model. 
+# To do that, we will use a Linear layer. This layer will be densely connected, 
+# meaning that each neuron in it, and its weights, will affect every neuron in the next layer.
+input_size = 1 * 28 * 28
+layers = [
+    nn.Flatten(),
+    nn.Linear(input_size, 512),  # Input
+    nn.ReLU(),  # Activation for input
+]
+
+""" 1.5.3 The Hidden Layer """
+
+# Now we will add an additional densely connected linear layer. 
+# We will cover why adding another set of neurons can help improve 
+# learning in the next lesson. Just like how the input layer needed to 
+# know the shape of the data that was being passed to it, a hidden layer's Linear needs to know the shape of the data being passed to it. Each neuron in the previous layer will compute one number, so the number of inputs into the hidden layer is the same as the number of neurons in the previous later.
+
+layers = [
+    nn.Flatten(),
+    nn.Linear(input_size, 512),  # Input
+    nn.ReLU(),  # Activation for input
+    nn.Linear(512, 512),  # Hidden
+    nn.ReLU(),  # Activation for hidden
+]
+
+""" 1.5.4 The Output Layer """
+
+# Finally, we will add an output layer. In this case, since the 
+# network is to make a guess about a single image belonging to 1 of 10 
+# possible categories, there will be 10 outputs. Each output is assigned 
+# a neuron. The larger the value of the output neuron compared to the other 
+# neurons, the more the model predicts the input image belongs to the 
+# output neuron's assigned class.
+
+n_classes = 10
+layers = [
+    nn.Flatten(),
+    nn.Linear(input_size, 512),  # Input
+    nn.ReLU(),  # Activation for input
+    nn.Linear(512, 512),  # Hidden
+    nn.ReLU(),  # Activation for hidden
+    nn.Linear(512, n_classes)  # Output
+]
+
+""" 1.5.5 Compiling the Model """
+
+# A Sequential model expects a sequence of arguments, not a list, 
+# so we can use the * operator to unpack our list of layers into a sequence. 
+# We can print the model to verify these layers loaded correctly.
+
+model = nn.Sequential(*layers)
+
+# Much like tensors, when the model is first initialized, it will be processed on a CPU. To have it process with a GPU, we can use `to(device)`.
+
+model.to(device)
+
+# To check which device a model is on, we can check which device the model parameters are on. Check out this [stack overflow](https://stackoverflow.com/questions/58926054/how-to-get-the-device-type-of-a-pytorch-module-conveniently) post for more information.
+
+next(model.parameters()).device
+model = torch.compile(model)
+
+""" 1.6 Training the Model """
+
+# Training a model with data is often also called "fitting a model to data." 
+# Put another way, it highlights that the shape of the model changes over 
+# time to more accurately understand the data that it is being given.
+
+""" 1.6.1 Loss and Optimization """
+
+# Just like how teachers grade students, we need to provide the model a 
+# function in which to grade its answers. This is called a `loss function`. 
+# We will use a type of loss function called [CrossEntropy](https://pytorch.org/docs/stable/generated/torch.nn.CrossEntropyLoss.html) 
+# which is designed to grade if a model predicted the correct category from a group of categories.
+
+loss_function = nn.CrossEntropyLoss()
+
+# Next, we select an `optimizer` for our model. If the `loss_function` provides a grade, the optimizer tells the model how to learn from this grade to do better next time.
+
+optimizer = Adam(model.parameters())
+
+""" 1.6.2 Calculating Accuracy """
+
