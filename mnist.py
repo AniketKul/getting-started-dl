@@ -200,3 +200,60 @@ optimizer = Adam(model.parameters())
 
 """ 1.6.2 Calculating Accuracy """
 
+train_N = len(train_loader.dataset)
+valid_N = len(valid_loader.dataset)
+
+def get_batch_accuracy(output, y, N):
+    pred = torch.argmax(output, dim=1)
+    return (pred == y).sum().item() / N
+
+""" 1.6.3 The Train Function """
+
+def train():
+    loss = 0
+    accuracy = 0
+
+    model.train()
+    for x, y in train_loader:
+        x, y = x.to(device), y.to(device)
+        output = model(x)
+        optimizer.zero_grad()
+        batch_loss = loss_function(output, y)
+        batch_loss.backward()
+        optimizer.step()
+
+        loss += batch_loss.item()
+        accuracy += get_batch_accuracy(output, y, train_N)
+    print('Train - Loss: {:.4f} Accuracy: {:.4f}'.format(loss, accuracy))
+
+""" 1.6.4 The Validate Function """
+
+def validate():
+    loss = 0
+    accuracy = 0
+
+    model.eval()
+    with torch.no_grad():
+        for x, y in valid_loader:
+            x, y = x.to(device), y.to(device)
+            output = model(x)
+            loss += loss_function(output, y).item()
+            accuracy += get_batch_accuracy(output, y, valid_N)
+    print('Valid - Loss: {:.4f} Accuracy: {:.4f}'.format(loss, accuracy))
+
+""" 1.6.5 The Training Loop """
+
+# To see how the model is progressing, we will alternated between training and validation. Just like how it might take a student a few times going through their deck of flash cards to learn all the concepts, the model will go through the training data multiple times to get a better and better understanding.
+
+# An `epoch` is one complete pass through the entire dataset. Let's train and validate the model for 5 `epochs` to see how it learns.
+
+epochs = 5
+for epoch in range(epochs):
+    print('Epoch: {}'.format(epoch))
+    train()
+    validate()
+
+predictions = model(x_0_tensor.to(device))
+print(predictions)
+print(predictions.argmax(dim=1))
+print(y_0)
